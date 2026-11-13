@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xsi:schemaLocation="
+           http://www.springframework.org/schema/beans
+           http://www.springframework.org/schema/beans/spring-beans.xsd
+           http://www.springframework.org/schema/context
+           http://www.springframework.org/schema/context/spring-context.xsd">
+
+    <!-- Load values from the properties file -->
+    <context:property-placeholder location="classpath:result.properties"/>
+
+    <!-- Repository, with students injected as a list of inner beans and a <map> for marks -->
+    <bean id="studentRepository" class="com.afridi.repository.InMemoryStudentRepository">
+        <property name="students">
+            <list>
+                <bean class="com.afridi.model.Student">
+                    <property name="id" value="1"/>
+                    <property name="name" value="Ali"/>
+                    <property name="marks">
+                        <map key-type="java.lang.String" value-type="java.lang.Integer">
+                            <entry key="Maths" value="85"/>
+                            <entry key="Physics" value="72"/>
+                            <entry key="English" value="90"/>
+                        </map>
+                    </property>
+                </bean>
+                <bean class="com.afridi.model.Student">
+                    <property name="id" value="2"/>
+                    <property name="name" value="Sara"/>
+                    <property name="marks">
+                        <map key-type="java.lang.String" value-type="java.lang.Integer">
+                            <entry key="Maths" value="30"/>
+                            <entry key="Physics" value="25"/>
+                            <entry key="English" value="40"/>
+                        </map>
+                    </property>
+                </bean>
+                <bean class="com.afridi.model.Student">
+                    <property name="id" value="3"/>
+                    <property name="name" value="Bilal"/>
+                    <property name="marks">
+                        <map key-type="java.lang.String" value-type="java.lang.Integer">
+                            <entry key="Maths" value="60"/>
+                            <entry key="Physics" value="65"/>
+                            <entry key="English" value="55"/>
+                        </map>
+                    </property>
+                </bean>
+            </list>
+        </property>
+    </bean>
+
+    <!-- Grading strategies -->
+    <bean id="percentageGrading" class="com.afridi.grading.PercentageGrading"/>
+    <bean id="gpaGrading" class="com.afridi.grading.GpaGrading"/>
+
+    <!-- Notifiers -->
+    <bean id="consoleNotifier" class="com.afridi.notification.ConsoleNotifier"/>
+    <bean id="emailNotifier" class="com.afridi.notification.EmailNotifier" lazy-init="true">
+        <property name="fromAddress" value="${result.email.from}"/>
+    </bean>
+
+    <!-- Prototype: a new ResultCard on every getBean -->
+    <bean id="resultCard" class="com.afridi.model.ResultCard" scope="prototype"/>
+
+    <!-- The service: everything is wired here -->
+    <bean id="resultService" class="com.afridi.service.ResultService"
+          init-method="start" destroy-method="shutdown">
+
+        <constructor-arg ref="studentRepository"/>
+
+        <property name="gradingStrategy" ref="percentageGrading"/>
+        <property name="notifier" ref="consoleNotifier"/>
+
+        <property name="subjects">
+            <list>
+                <bean class="com.afridi.model.Subject">
+                    <constructor-arg value="Maths"/>
+                    <constructor-arg value="100"/>
+                </bean>
+                <bean class="com.afridi.model.Subject">
+                    <constructor-arg value="Physics"/>
+                    <constructor-arg value="100"/>
+                </bean>
+                <bean class="com.afridi.model.Subject">
+                    <constructor-arg value="English"/>
+                    <constructor-arg value="100"/>
+                </bean>
+            </list>
+        </property>
+
+        <property name="passPercentage" value="${result.pass.percentage}"/>
+        <property name="institutionName" value="${result.institution}"/>
+    </bean>
+</beans>
