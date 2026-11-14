@@ -1,8 +1,13 @@
-# Spring Core: Student Result System (XML Configuration)
+# Spring Core: Student Result System (XML and Java Configuration)
 
-A console application that calculates student results (total, percentage, grade, pass/fail) where **every object is created and wired by Spring from an XML file**. There is no `new` for services in the application code.
+A console application that calculates student results (total, percentage, grade, pass/fail) where **every object is created and wired by Spring**. There is no `new` for services in the application logic.
 
-This project covers the first style of Spring bean management: **XML-based configuration**. The same app will later be rebuilt with Java-based configuration and annotations/Spring Boot.
+The same application is configured in two styles, so the two can be compared directly:
+
+1. **XML-based configuration** (`applicationContext.xml`)
+2. **Java-based configuration** (`AppConfig` with `@Configuration` and `@Bean`)
+
+Only the configuration changes. The model, repository, grading, notification and service classes are identical in both versions. Annotation-based configuration and Spring Boot come next.
 
 ## Tech Stack
 
@@ -11,6 +16,8 @@ This project covers the first style of Spring bean management: **XML-based confi
 - Maven
 
 ## What it demonstrates
+
+### XML configuration
 
 | Spring concept | Where it is used |
 |---|---|
@@ -26,6 +33,19 @@ This project covers the first style of Spring bean management: **XML-based confi
 | Lifecycle callbacks | `init-method="start"`, `destroy-method="shutdown"` |
 | Lazy initialization | `emailNotifier` is created only when requested |
 | `ApplicationContextAware` | the singleton service gets a fresh prototype `ResultCard` each time |
+
+### Java configuration
+
+| Spring concept | Where it is used                                                          |
+|---|---------------------------------------------------------------------------|
+| `@Configuration` | `AppConfig` replaces `spring.xml`                                           |
+| `@Bean` | each method defines one bean (method name = bean id)                      |
+| `AnnotationConfigApplicationContext` | creates the container from `AppConfig`                                    |
+| `@PropertySource` + `@Value` | loads `result.properties` and injects values                              |
+| `@Scope("prototype")` | `resultCard`                                                              |
+| `@Lazy` | `emailNotifier`                                                           |
+| `@Bean(initMethod, destroyMethod)` | `start()` and `shutdown()` on `ResultService`                             |
+| Bean method calls | `resultService()` calls `studentRepository()` and gets the same singleton |
 
 ## Concepts Revised
 
@@ -151,12 +171,59 @@ The top of a Spring XML file:
 - If there are two beans of the same type, Spring throws `NoUniqueBeanDefinitionException`.
 - Fix with `primary="true"` (XML) or `@Primary`, or choose a specific bean with `@Qualifier("beanName")`.
 
+### 9. Java-Based Configuration
+- A class marked `@Configuration` replaces the XML file.
+- Each method marked `@Bean` is one bean definition. The **method name is the bean id**, and the return value is the bean.
+- The container is created with `AnnotationConfigApplicationContext(AppConfig.class)`.
+
+```java
+@Configuration
+public class AppConfig {
+
+    @Bean
+    public GradingStrategy percentageGrading() {
+        return new PercentageGrading();
+    }
+}
+```
+
+### 10. How `@Bean` methods call each other
+- Inside `resultService()`, the code calls `studentRepository()`. This does **not** create a second repository.
+- Spring wraps a `@Configuration` class in a proxy, so calling a `@Bean` method returns the **existing singleton**. For a `prototype` bean, it returns a new object.
+- That is why the beans stay singletons even though the code looks like plain method calls.
+
+### 11. Values and Annotations in Java Config
+
+| XML | Java config |
+|---|---|
+| `<context:property-placeholder location="..."/>` | `@PropertySource("classpath:result.properties")` |
+| `value="${result.institution}"` | `@Value("${result.institution}")` |
+| `scope="prototype"` | `@Scope("prototype")` |
+| `lazy-init="true"` | `@Lazy` |
+| `init-method` / `destroy-method` | `@Bean(initMethod = "...", destroyMethod = "...")` |
+| `primary="true"` | `@Primary` |
+| `<constructor-arg ref>` | pass the bean to the constructor inside the `@Bean` method |
+| `<property ref>` | call the setter inside the `@Bean` method |
+
+### 12. XML vs Java Configuration
+
+| Point | XML | Java config |
+|---|---|---|
+| Changing a wiring | Edit the file, **no recompile** | Edit Java, **recompile** |
+| Typos | Found at startup (runtime) | Found by the compiler |
+| Refactoring support | Weak (class names are strings) | Strong (IDE renames everything) |
+| Logic (conditions, loops) | Not possible | Plain Java |
+| Readability | Verbose | Shorter |
+| Common today | Legacy projects | Yes, and the base for Spring Boot |
+
 ## Project Structure
 
 ```
 src/main/
 ├── java/com/afridi/
-│   ├── Main.java
+│   ├── Main.java                             runs the app
+│   ├── config/
+│   │   └── AppConfig.java                    Java configuration (replaces the XML)
 │   ├── model/
 │   │   ├── Student.java
 │   │   ├── Subject.java
@@ -175,7 +242,7 @@ src/main/
 │   └── service/
 │       └── ResultService.java
 └── resources/
-    ├── applicationContext.xml                bean definitions and wiring
+    ├── spring.xml                XML version of the configuration
     └── result.properties                     institution, pass mark, email
 ```
 
@@ -183,15 +250,17 @@ src/main/
 
 ```
 resultService
- ├─ constructor-arg  -> studentRepository
+ ├─ constructor      -> studentRepository
  ├─ gradingStrategy  -> percentageGrading   (swap with gpaGrading)
  ├─ notifier         -> consoleNotifier     (swap with emailNotifier)
- ├─ subjects         -> <list> of Subject beans
+ ├─ subjects         -> list of Subject objects
  ├─ passPercentage   -> ${result.pass.percentage}
  └─ institutionName  -> ${result.institution}
 
 resultCard (prototype) -> a new instance on every getBean call
 ```
+
+The wiring is the same in both styles. In XML it is written with `<constructor-arg>` and `<property>`. In Java config it is written inside the `resultService()` method.
 
 ## Grading Rules
 
@@ -209,11 +278,25 @@ A student passes if their percentage is at least `result.pass.percentage` (defau
 
 ## How to Run
 
-**IntelliJ:** open the project, let Maven download the dependencies, and run `com.afridi.Main`.
-
 **Requirements:** JDK 17 or higher (Spring 6), Maven.
 
+**Java configuration (current):** open the project in IntelliJ, let Maven download the dependencies, and run `com.afridi.Main`. It starts the container with:
+
+```java
+new AnnotationConfigApplicationContext(AppConfig.class);
+```
+
+**XML configuration:** in `Main`, the XML version is kept as commented lines. To run it, comment out the `AnnotationConfigApplicationContext` lines and uncomment these:
+
+```java
+new ClassPathXmlApplicationContext("spring.xml");
+```
+
+Everything else in `Main` stays the same (you'll also need to switch the variable type and import to `ClassPathXmlApplicationContext`).
+
 ## Sample Output
+
+The output is identical for both configuration styles.
 
 ```
 Result system started for ABC University
@@ -250,21 +333,31 @@ Result system closed
 
 ## Experiments to try
 
+**XML**
 1. **Swap grading:** in `applicationContext.xml`, change `ref="percentageGrading"` to `ref="gpaGrading"` and rerun. No Java changes needed.
 2. **Swap notifier:** change `consoleNotifier` to `emailNotifier`.
 3. **Change the pass mark:** edit `result.pass.percentage` in `result.properties`.
 4. **Break a `ref`:** misspell a bean id and read the `NoSuchBeanDefinitionException`.
 5. **Autowiring:** replace the grading `<property>` with `autowire="byType"` and observe `NoUniqueBeanDefinitionException`, then fix it with `primary="true"`.
 
+**Java config**
+1. **Swap grading:** in `resultService()`, change `percentageGrading()` to `gpaGrading()` and rerun (this time you must recompile).
+2. **Prove the proxy:** print `ctx.getBean("studentRepository") == ctx.getBean("studentRepository")`. It is `true`.
+3. **`@Primary`:** add it to `percentageGrading()` and fetch `ctx.getBean(GradingStrategy.class)`.
+4. **Inject by parameter:** rewrite `resultService` to receive its dependencies as method parameters instead of calling other `@Bean` methods.
+5. **Lazy bean:** add a `println` in the `EmailNotifier` constructor and confirm it only prints when the bean is requested.
+
 ## What I learned
 
 - Spring creates objects and injects dependencies, so classes do not construct their own collaborators (Inversion of Control and Dependency Injection).
-- Depending on interfaces makes behaviour configurable from XML.
+- Depending on interfaces makes behaviour configurable from the configuration, not the code.
 - A singleton cannot directly hold a prototype bean, because the prototype would be injected only once. The service asks the context for a new one each time.
 - Closing the context triggers `destroy-method`.
+- XML and Java config produce the same beans. XML can change without recompiling, Java config is checked by the compiler.
+- Calling a `@Bean` method inside a `@Configuration` class returns the existing singleton, because Spring proxies the class.
 
 ## Roadmap
 
-- [x] XML-based configuration (this project)
-- [ ] Java-based configuration (`@Configuration`, `@Bean`)
-- [ ] Annotation-based configuration and Spring Boot
+- [x] XML-based configuration
+- [x] Java-based configuration (`@Configuration`, `@Bean`)
+- [ ] Annotation-based configuration (`@Component`, `@Autowired`) and Spring Boot
