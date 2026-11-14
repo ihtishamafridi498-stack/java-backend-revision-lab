@@ -1,4 +1,4 @@
-# Core Java Revision
+﻿# Core Java Revision
 
 A structured revision of core Java fundamentals, with hands-on projects for each stage.
 
@@ -58,14 +58,14 @@ A structured revision of core Java fundamentals, with hands-on projects for each
 ## Projects
 
 ### Student Management System
-`implementation/student-management`
+`01-core-java/student-management`
 
 - Student class with private fields
 - Multiple constructors with chaining to avoid duplicate initialization
 - `displayDetails()` and `isEligibleForAdmission()` methods
 
 ### Library Management System
-`implementation/library-management`
+`01-core-java/library-management`
 
 A console application that combines topics 1 to 8.
 
@@ -95,22 +95,22 @@ A console application that combines topics 1 to 8.
 **Project structure**
 ```
 library-management/src/
-├── Main2.java              console menu
-├── contract/
-│   ├── Borrowable.java     interface
-│   ├── Searchable.java     interface
-│   └── Fineable.java       interface (with a default method)
-├── model/
-│   ├── LibraryItem.java    abstract class
-│   ├── Book.java
-│   ├── Magazine.java
-│   ├── DVD.java
-│   ├── Member.java         abstract class
-│   ├── StudentMember.java
-│   ├── TeacherMember.java
-│   └── Loan.java
-└── service/
-    └── Library.java        business logic
+â”œâ”€â”€ Main2.java              console menu
+â”œâ”€â”€ contract/
+â”‚   â”œâ”€â”€ Borrowable.java     interface
+â”‚   â”œâ”€â”€ Searchable.java     interface
+â”‚   â””â”€â”€ Fineable.java       interface (with a default method)
+â”œâ”€â”€ model/
+â”‚   â”œâ”€â”€ LibraryItem.java    abstract class
+â”‚   â”œâ”€â”€ Book.java
+â”‚   â”œâ”€â”€ Magazine.java
+â”‚   â”œâ”€â”€ DVD.java
+â”‚   â”œâ”€â”€ Member.java         abstract class
+â”‚   â”œâ”€â”€ StudentMember.java
+â”‚   â”œâ”€â”€ TeacherMember.java
+â”‚   â””â”€â”€ Loan.java
+â””â”€â”€ service/
+    â””â”€â”€ Library.java        business logic
 ```
 
 **Where each concept is used**
@@ -132,7 +132,7 @@ From IntelliJ: open the project and run `Main2`.
 
 From the terminal:
 ```bash
-cd implementation/library-management/src
+cd 01-core-java/library-management/src
 javac -d ../out contract/*.java model/*.java service/*.java Main2.java
 java -cp ../out Main2
 ```
